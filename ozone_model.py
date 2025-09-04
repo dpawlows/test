@@ -9,6 +9,7 @@ class RoadSource:
     start: Tuple[float, float]
     end: Tuple[float, float]
     rate_func: Callable[[float], float]
+    name: str = ""
 
     def cells(self, dx: float, dy: float) -> List[Tuple[int, int]]:
         """Return grid cells along the road"""
