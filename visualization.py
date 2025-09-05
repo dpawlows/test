@@ -1,6 +1,6 @@
 """Utilities for visualizing the simulation using geographic data."""
 
-from typing import Callable, Iterable, List, Tuple
+from typing import Callable, List, Tuple
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -19,6 +19,51 @@ def load_roads(
     """
 
     gdf = gpd.read_file(shapefile_path)
+
+    name_field = None
+    for candidate in ("FULLNAME", "name", "NAME", "Name"):
+        if candidate in gdf.columns:
+            name_field = candidate
+            break
+
+    if name_field is not None:
+        def _match(pattern: str):
+            return gdf[gdf[name_field].str.contains(pattern, case=False, na=False)]
+
+        i215 = _match(r"\bI[- ]?215\b")
+        i15 = _match(r"\bI[- ]?15\b")
+        r209 = _match(r"\b209\b")
+
+        if not i215.empty and not i15.empty and not r209.empty:
+            west = i215.total_bounds[0]
+            east = i215.total_bounds[2]
+
+            north_int = i215.overlay(i15, how="intersection")
+            north = (
+                north_int.total_bounds[3]
+                if not north_int.empty
+                else i215.total_bounds[3]
+            )
+
+            south_int = i15.overlay(r209, how="intersection")
+            south = (
+                south_int.total_bounds[1]
+                if not south_int.empty
+                else r209.total_bounds[1]
+            )
+
+            gdf = gdf.cx[west:east, south:north]
+            north_south = (south, north)
+            west_east = (west, east)
+        else:
+            minx, miny, maxx, maxy = gdf.total_bounds
+            north_south = (miny, maxy)
+            west_east = (minx, maxx)
+    else:
+        minx, miny, maxx, maxy = gdf.total_bounds
+        north_south = (miny, maxy)
+        west_east = (minx, maxx)
+
     roads: List[RoadSource] = []
     for _, row in gdf.iterrows():
         geom = row.geometry
@@ -56,8 +101,8 @@ def plot_valley_map(gdf: gpd.GeoDataFrame):
     fig, ax = plt.subplots(figsize=(8, 8))
     gdf.plot(ax=ax, color="black", linewidth=0.5)
 
-    ax.set_xlabel("West-East (m)")
-    ax.set_ylabel("North-South (m)")
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
     ax.set_title("Salt Lake City Valley")
 
     name_field = None
