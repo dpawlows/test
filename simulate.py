@@ -4,7 +4,7 @@ from ozone_model import OzoneModel
 from visualization import load_roads, plot_valley_map
 
 
-SHAPEFILE = "slc_roads.shp"
+SHAPEFILE = "tl_2020_49035_roads.shp"
 
 
 def rush_hour_rate(t: float) -> float:
